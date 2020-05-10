@@ -47,7 +47,7 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr &viewer, ProcessPointCloud
 
     // Segment road and obstacle
     //std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmented_cloud = point_processorI->SegmentPlane(filtered_cloud, 100, 0.2);
-    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmented_cloud = point_processorI->SegmentPlaneRansac(filtered_cloud, 10, 0.2);
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmented_cloud = point_processorI->SegmentPlaneRansac(filtered_cloud, 25, 0.2);
     renderPointCloud(viewer, segmented_cloud.first, "Obstacle cloud", Color(1, 0, 0));
     renderPointCloud(viewer, segmented_cloud.second, "Road cloud", Color(0, 1, 0));
 
