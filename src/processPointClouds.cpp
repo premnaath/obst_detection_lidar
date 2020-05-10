@@ -128,11 +128,10 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 //std::unordered_set<int> ProcessPointClouds<PointT>::RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceTol)
 
 template <typename PointT>
-std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceTol)
+std::unordered_set<int> ProcessPointClouds<PointT>::RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceTol)
 {
     std::unordered_set<int> inliersResult;
-    pcl::PointIndices::Ptr inliers_ptr(new pcl::PointIndices());
-    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult;
+
     srand(time(NULL));
 
     // TODO: Fill in this function
@@ -171,8 +170,8 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 
         // Measure distance between every point and fitted line
         // If distance is smaller than threshold count it as inlier
-        pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cloud_road(new pcl::PointCloud<pcl::PointXYZI>());
-        pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cloud_obst(new pcl::PointCloud<pcl::PointXYZI>());
+        // pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cloud_road(new pcl::PointCloud<pcl::PointXYZI>());
+        // pcl::PointCloud<pcl::PointXYZI>::Ptr temp_cloud_obst(new pcl::PointCloud<pcl::PointXYZI>());
 
         for (int i = 0; i < cloud->points.size(); i++)
         {
@@ -189,11 +188,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
             if (distance <= distanceTol)
             {
                 inliers.insert(i);
-                temp_cloud_road->points.push_back(cloud->points[i]);
-            }
-            else
-            {
-                temp_cloud_obst->points.push_back(cloud->points[i]);
+                // temp_cloud_road->points.push_back(cloud->points[i]);
             }
         }
 
@@ -202,14 +197,10 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
         {
             inliersResult = inliers;
             //std::cout << "Inliers size : " << inliers.size() << " Total size : " << cloud->points.size() << std::endl;
-            
-            std::cout << "Iterations" << maxIterations << std::endl;
-            segResult.first = temp_cloud_obst;
-            segResult.second = temp_cloud_road;
         }
     }
 
-    return segResult; // inliersResult;
+    return inliersResult;
 }
 
 template <typename PointT>
@@ -219,27 +210,24 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     auto startTime = std::chrono::steady_clock::now();
 
     // TODO: Change the max iteration and distance tolerance arguments for Ransac function
-    // std::unordered_set<int> inliers = RansacPlane(cloud, maxIterations, distanceThreshold);
+    std::unordered_set<int> inliers = RansacPlane(cloud, maxIterations, distanceThreshold);
 
-    // //std::unordered_set<int> inliers;
-    // //RansacPlane(cloud, maxIterations, distanceThreshold, inliers);
+    typename pcl::PointCloud<PointT>::Ptr cloudInliers(new pcl::PointCloud<PointT>());
+    typename pcl::PointCloud<PointT>::Ptr cloudOutliers(new pcl::PointCloud<PointT>());
 
-    // typename pcl::PointCloud<PointT>::Ptr cloudInliers(new pcl::PointCloud<PointT>());
-    // typename pcl::PointCloud<PointT>::Ptr cloudOutliers(new pcl::PointCloud<PointT>());
+    for (int index = 0; index < cloud->points.size(); index++)
+    {
+        //pcl::PointXYZ point = cloud->points[index];
+        PointT point = cloud->points[index];
+        if (inliers.count(index))
+            cloudInliers->points.push_back(point);
+        else
+            cloudOutliers->points.push_back(point);
+    }
 
-    // for (int index = 0; index < cloud->points.size(); index++)
-    // {
-    //     //pcl::PointXYZ point = cloud->points[index];
-    //     PointT point = cloud->points[index];
-    //     if (inliers.count(index))
-    //         cloudInliers->points.push_back(point);
-    //     else
-    //         cloudOutliers->points.push_back(point);
-    // }
-
-    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult = RansacPlane(cloud, maxIterations, distanceThreshold);
-    //segResult.first = cloudOutliers;
-    //segResult.second = cloudInliers;
+    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult;  // = RansacPlane(cloud, maxIterations, distanceThreshold);
+    segResult.first = cloudOutliers;
+    segResult.second = cloudInliers;
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
