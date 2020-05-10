@@ -131,6 +131,7 @@ template <typename PointT>
 std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceTol)
 {
     std::unordered_set<int> inliersResult;
+    pcl::PointIndices::Ptr inliers_ptr(new pcl::PointIndices());
     std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult;
     srand(time(NULL));
 
@@ -194,14 +195,15 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
             {
                 temp_cloud_obst->points.push_back(cloud->points[i]);
             }
-            
         }
 
         // Return indicies of inliers from fitted line with most inliers
         if (inliers.size() > inliersResult.size()) //  &&  inliers.size()/cloud->points.size() > 0.9
         {
             inliersResult = inliers;
+            //std::cout << "Inliers size : " << inliers.size() << " Total size : " << cloud->points.size() << std::endl;
             
+            std::cout << "Iterations" << maxIterations << std::endl;
             segResult.first = temp_cloud_obst;
             segResult.second = temp_cloud_road;
         }
@@ -404,7 +406,7 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::loadPcd(std::s
     {
         PCL_ERROR("Couldn't read file \n");
     }
-    std::cerr << "Loaded " << cloud->points.size() << " data points from " + file << std::endl;
+    //std::cerr << "Loaded " << cloud->points.size() << " data points from " + file << std::endl;
 
     return cloud;
 }
