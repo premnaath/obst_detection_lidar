@@ -1,6 +1,6 @@
-/* \author Aaron Brown */
-// Create simple 3d highway enviroment using PCL
-// for exploring self-driving car sensors
+/* \author Premnaath Sukumar */
+// Create simple 3d urban enviroment using PCL
+// Project 1 - Sensor Fusion Nanodegree
 
 #include "sensors/lidar.h"
 #include "render/render.h"

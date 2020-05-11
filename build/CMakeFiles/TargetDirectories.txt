@@ -1,0 +1,3 @@
+/home/prem/Stuff/Udacity/git/clones/obst_detection_lidar/build/CMakeFiles/rebuild_cache.dir
+/home/prem/Stuff/Udacity/git/clones/obst_detection_lidar/build/CMakeFiles/environment.dir
+/home/prem/Stuff/Udacity/git/clones/obst_detection_lidar/build/CMakeFiles/edit_cache.dir
