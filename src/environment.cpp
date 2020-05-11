@@ -39,90 +39,65 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr &viewer, ProcessPointCloud
     //ProcessPointClouds<pcl::PointXYZI> *point_processorI(new ProcessPointClouds<pcl::PointXYZI>());
     //pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = point_processorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
 
-    float filterRes = 0.15f;
+    float filterRes = 0.25f;
     Eigen::Vector4f minPoint(-10.0, -6.0, -2.0, 1.0);
-    Eigen::Vector4f maxPoint(32.0, 6.5, 5.0, 1.0);
+    Eigen::Vector4f maxPoint(32.0, 7.0, 5.0, 1.0);
     pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud = point_processorI->FilterCloud(inputCloud, filterRes, minPoint, maxPoint);
     //renderPointCloud(viewer, filtered_cloud, "InputCloud");
 
     // Segment road and obstacle
     //std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmented_cloud = point_processorI->SegmentPlane(filtered_cloud, 100, 0.2);
-    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmented_cloud = point_processorI->SegmentPlaneRansac(filtered_cloud, 25, 0.2);
-    renderPointCloud(viewer, segmented_cloud.first, "Obstacle cloud", Color(1, 0, 0));
-    renderPointCloud(viewer, segmented_cloud.second, "Road cloud", Color(0, 1, 0));
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmented_cloud = point_processorI->SegmentPlaneRansac(filtered_cloud, 50, 0.2);
+    //renderPointCloud(viewer, segmented_cloud.first, "Obstacle cloud", Color(1, 0, 0));
+    renderPointCloud(viewer, segmented_cloud.second, "Road cloud", Color(0.5, 0.5, 0.5));
 
-    /*
-    // Cluster things
-    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters = point_processorI->Clustering(segmented_cloud.first, 0.6, 4, 3000);
+    // Cluster with KD-Tree
+    KdTree *tree = new KdTree;
 
+	for (int i = 0; i < segmented_cloud.first->points.size(); i++)
+		tree->insert(segmented_cloud.first->points[i], i);
+
+    // Time segmentation process
+	auto startTime = std::chrono::steady_clock::now();
+	//
+	//std::vector<std::vector<int>> clusters = point_processorI->euclideanCluster(segmented_cloud.first, tree, 0.45, 10, 1000);
+    //std::vector<std::vector<int>> clusters = point_processorI->euclideanCluster(segmented_cloud.first, tree, 0.45, 10, 550);
+    std::vector<std::vector<int>> clusters = point_processorI->euclideanCluster(segmented_cloud.first, tree, 0.45, 8, 550);
+	//
+	auto endTime = std::chrono::steady_clock::now();
+	auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+	std::cout << "clustering found " << clusters.size() << " and took " << elapsedTime.count() << " milliseconds" << std::endl;
+
+    // Separate clusters
+
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters;
+    
     int clusterId = 0;
-    std::vector<Color> colors = {Color(1, 0, 0), Color(0, 1, 0), Color(0, 0, 1), Color(1, 1, 0), Color(0, 1, 1), Color(1, 1, 1),
-                                 Color(0.5, 0, 0), Color(0, 0.5, 0), Color(0, 0, 0.5), Color(0.5, 0.5, 0), Color(0, 0.5, 0.5)};
+	for (std::vector<int> cluster : clusters)
+	{
+		pcl::PointCloud<pcl::PointXYZI>::Ptr clusterCloud(new pcl::PointCloud<pcl::PointXYZI>());
+		for (int indice : cluster)
+        {
+                clusterCloud->points.push_back(segmented_cloud.first->points[indice]);
+        }
+			
+        
+        cloudClusters.push_back(clusterCloud);
+		++clusterId;
+	}
 
-    pcl::PointXYZI centroid;
-    pcl::computeCentroid(*segmented_cloud.second, centroid);
-    std::cout << "Centroid : " << centroid.z << std::endl;
+	std::vector<Color> colors = {Color(1, 0, 0), Color(0, 1, 0), Color(0, 0, 1), Color(1, 1, 0), Color(0, 1, 1), Color(1, 1, 1),
+                                 Color(0.5, 0, 0), Color(0, 0.5, 0), Color(0, 0, 0.5), Color(0.5, 0.5, 0), Color(0, 0.5, 0.5)};
 
     for (pcl::PointCloud<pcl::PointXYZI>::Ptr cluster : cloudClusters)
     {
         std::cout << "cluster size ";
         point_processorI->numPoints(cluster);
-        renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(clusterId), colors[clusterId]);
+        int color_id = clusterId % colors.size();
+        renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(clusterId), colors[color_id]);
 
         Box box = point_processorI->BoundingBox(cluster);
         renderBox(viewer, box, clusterId);
-
-        //BoxQ boxq = point_processorI->BoundingBoxQ(cluster);
-        //renderBox(viewer, boxq, clusterId, colors[0]);
-
-        ++clusterId;
-    }*/
-}
-
-void simpleHighway(pcl::visualization::PCLVisualizer::Ptr &viewer)
-{
-    // ----------------------------------------------------
-    // -----Open 3D viewer and display simple highway -----
-    // ----------------------------------------------------
-
-    // RENDER OPTIONS
-    bool renderScene = false;
-    std::vector<Car> cars = initHighway(renderScene, viewer);
-
-    // TODO:: Create lidar sensor
-    Lidar *lidar = new Lidar(cars, 0);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = lidar->scan();
-    // renderRays(viewer, lidar->position, cloud);
-    // renderPointCloud(viewer, cloud, "Point cloud");
-
-    // TODO:: Create point processor
-    ProcessPointClouds<pcl::PointXYZ> *point_processor = new ProcessPointClouds<pcl::PointXYZ>();
-
-    /*std::stack<ProcessPointClouds<pcl::PointXYZ>> point_processor_stack;
-    point_processor_stack.push(ProcessPointClouds<pcl::PointXYZ>());*/
-
-    std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> segmented_cloud = point_processor->SegmentPlane(cloud, 100, 0.2);
-
-    // renderPointCloud(viewer, segmented_cloud.first, "Obstacle cloud", Color(1, 0, 0));
-    renderPointCloud(viewer, segmented_cloud.second, "Road cloud", Color(0, 1, 0));
-
-    // Cluster things
-    std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> cloudClusters = point_processor->Clustering(segmented_cloud.first, 1.5, 3, 30);
-
-    int clusterId = 0;
-    std::vector<Color> colors = {Color(1, 0, 0), Color(0, 1, 0), Color(0, 0, 1)};
-
-    for (pcl::PointCloud<pcl::PointXYZ>::Ptr cluster : cloudClusters)
-    {
-        std::cout << "cluster size ";
-        point_processor->numPoints(cluster);
-        renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(clusterId), colors[clusterId]);
-
-        Box box = point_processor->BoundingBox(cluster);
-        //renderBox(viewer, box, clusterId);
-
-        BoxQ boxq = point_processor->BoundingBoxQ(cluster);
-        renderBox(viewer, boxq, clusterId, colors[2]);
 
         ++clusterId;
     }
