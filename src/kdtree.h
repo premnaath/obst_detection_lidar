@@ -4,8 +4,6 @@
 #include "./render/render.h"
 
 // Structure to represent node of kd tree
-//template<typename PointT>  //-----------------------_>>>>>>>>>>>>>>>>>>CHANGE DEF TO TEMPLATE DEFINITION
-//typedef pcl::PointXYZI PointT;
 struct Node
 {
 	//std::vector<float> point;
@@ -20,7 +18,6 @@ struct Node
 	}
 };
 
-//template<typename PointT>  //-----------------------_>>>>>>>>>>>>>>>>>>CHANGE DEF TO TEMPLATE DEFINITION
 struct KdTree
 {
 	Node *root;
