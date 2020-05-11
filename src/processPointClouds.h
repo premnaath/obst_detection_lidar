@@ -38,9 +38,9 @@ public:
 
     std::unordered_set<int> RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceTol);
 
-    void proximity(const pcl::PointCloud<pcl::PointXYZI>::Ptr points, KdTree *tree, float distanceTol, std::vector<bool> &processed, int index, pcl::PointIndices &cluster, int maxsize);
+    void proximity(typename pcl::PointCloud<PointT>::Ptr points, KdTree *tree, float distanceTol, std::vector<bool> &processed, int index, pcl::PointIndices &cluster, int maxsize);
 
-    std::vector<std::vector<int>> euclideanCluster(const pcl::PointCloud<pcl::PointXYZI>::Ptr cloud, KdTree *tree, float distanceTol, int minSize, int maxsize);
+    std::vector<std::vector<int>> euclideanCluster(typename pcl::PointCloud<PointT>::Ptr cloud, KdTree *tree, float distanceTol, int minSize, int maxsize);
 
     Box BoundingBox(typename pcl::PointCloud<PointT>::Ptr cluster);
 

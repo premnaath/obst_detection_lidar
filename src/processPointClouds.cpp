@@ -58,12 +58,8 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
 template <typename PointT>
 std::unordered_set<int> ProcessPointClouds<PointT>::RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceTol)
 {
+    // Init return var
     std::unordered_set<int> inliersResult;
-
-    // srand(time(NULL));
-
-    // TODO: Fill in this function
-    std::size_t prev_inliers = 0;
 
     // For max iterations
     while (maxIterations--)
@@ -130,15 +126,16 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
 
-    // TODO: Change the max iteration and distance tolerance arguments for Ransac function
+    // Find the plane of best fit - RANSAC 3D
     std::unordered_set<int> inliers = RansacPlane(cloud, maxIterations, distanceThreshold);
 
+    // Point cloud to separate Road and Obstacle
     typename pcl::PointCloud<PointT>::Ptr cloudInliers(new pcl::PointCloud<PointT>());
     typename pcl::PointCloud<PointT>::Ptr cloudOutliers(new pcl::PointCloud<PointT>());
 
+    // Separate
     for (int index = 0; index < cloud->points.size(); index++)
     {
-        //pcl::PointXYZ point = cloud->points[index];
         PointT point = cloud->points[index];
         if (inliers.count(index))
             cloudInliers->points.push_back(point);
@@ -146,7 +143,8 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
             cloudOutliers->points.push_back(point);
     }
 
-    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult; // = RansacPlane(cloud, maxIterations, distanceThreshold);
+    // Pair segmented data
+    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult;
     segResult.first = cloudOutliers;
     segResult.second = cloudInliers;
 
@@ -157,8 +155,10 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     return segResult;
 }
 
+// Find the proximity points in the KD-tree within a given distance, min and max cluster size
+// This function finds the complete cluster with recursive calls
 template <typename PointT>
-void ProcessPointClouds<PointT>::proximity(const pcl::PointCloud<pcl::PointXYZI>::Ptr cloud, KdTree *tree, float distanceTol, std::vector<bool> &processed, int index, pcl::PointIndices &cluster, int maxSize)
+void ProcessPointClouds<PointT>::proximity(typename pcl::PointCloud<PointT>::Ptr cloud, KdTree *tree, float distanceTol, std::vector<bool> &processed, int index, pcl::PointIndices &cluster, int maxSize)
 {
     if (processed[index] && cloud->points.size() < maxSize)
     {
@@ -181,23 +181,28 @@ void ProcessPointClouds<PointT>::proximity(const pcl::PointCloud<pcl::PointXYZI>
     }
 }
 
+// Cluster the segmented data using a specified euclidean distance
 template <typename PointT>
-std::vector<std::vector<int>> ProcessPointClouds<PointT>::euclideanCluster(const pcl::PointCloud<pcl::PointXYZI>::Ptr cloud, KdTree *tree, float distanceTol, int minSize, int maxsize)
+std::vector<std::vector<int>> ProcessPointClouds<PointT>::euclideanCluster(typename pcl::PointCloud<PointT>::Ptr cloud, KdTree *tree, float distanceTol, int minSize, int maxsize)
 {
+    // Init
     std::vector<std::vector<int>> clusters;
     std::size_t cloud_size = cloud->points.size();
     std::vector<bool> processed(cloud_size, false);
 
+    // Cle
     for (int i = 0; i < cloud_size; i++)
     {
         if (processed[i])
         {
             continue;
         }
-
+        
+        // Call Proximity function with a referenced cluster
         pcl::PointIndices cluster;
         proximity(cloud, tree, distanceTol, processed, i, cluster, maxsize);
         
+        // Push back identified clusters of required size
         std::size_t cluster_size = cluster.indices.size();
 
         if (cluster_size > minSize && cluster_size < maxsize)
@@ -207,6 +212,7 @@ std::vector<std::vector<int>> ProcessPointClouds<PointT>::euclideanCluster(const
     return clusters;
 }
 
+// Create a bounding box to the given clustered data
 template <typename PointT>
 Box ProcessPointClouds<PointT>::BoundingBox(typename pcl::PointCloud<PointT>::Ptr cluster)
 {
@@ -243,7 +249,7 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::loadPcd(std::s
     {
         PCL_ERROR("Couldn't read file \n");
     }
-    //std::cerr << "Loaded " << cloud->points.size() << " data points from " + file << std::endl;
+    std::cerr << "Loaded " << cloud->points.size() << " data points from " + file << std::endl;
 
     return cloud;
 }

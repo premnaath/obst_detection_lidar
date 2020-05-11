@@ -34,42 +34,38 @@ std::vector<Car> initHighway(bool renderScene, pcl::visualization::PCLVisualizer
     return cars;
 }
 
+// Segmentation and cluster in a city block environment
 void cityBlock(pcl::visualization::PCLVisualizer::Ptr &viewer, ProcessPointClouds<pcl::PointXYZI>* point_processorI, const pcl::PointCloud<pcl::PointXYZI>::Ptr& inputCloud)
 {
-    //ProcessPointClouds<pcl::PointXYZI> *point_processorI(new ProcessPointClouds<pcl::PointXYZI>());
-    //pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = point_processorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
-
+    // Initialize
     float filterRes = 0.25f;
     Eigen::Vector4f minPoint(-10.0, -6.0, -2.0, 1.0);
     Eigen::Vector4f maxPoint(32.0, 7.0, 5.0, 1.0);
+
     pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud = point_processorI->FilterCloud(inputCloud, filterRes, minPoint, maxPoint);
-    //renderPointCloud(viewer, filtered_cloud, "InputCloud");
 
     // Segment road and obstacle
-    //std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmented_cloud = point_processorI->SegmentPlane(filtered_cloud, 100, 0.2);
     std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> segmented_cloud = point_processorI->SegmentPlaneRansac(filtered_cloud, 50, 0.2);
-    //renderPointCloud(viewer, segmented_cloud.first, "Obstacle cloud", Color(1, 0, 0));
     renderPointCloud(viewer, segmented_cloud.second, "Road cloud", Color(0.5, 0.5, 0.5));
 
     // Cluster with KD-Tree
     KdTree *tree = new KdTree;
 
+    // Insert points to the KD-tree
 	for (int i = 0; i < segmented_cloud.first->points.size(); i++)
 		tree->insert(segmented_cloud.first->points[i], i);
 
     // Time segmentation process
 	auto startTime = std::chrono::steady_clock::now();
-	//
-	//std::vector<std::vector<int>> clusters = point_processorI->euclideanCluster(segmented_cloud.first, tree, 0.45, 10, 1000);
-    //std::vector<std::vector<int>> clusters = point_processorI->euclideanCluster(segmented_cloud.first, tree, 0.45, 10, 550);
+	
+    // Call euclidean clustering
     std::vector<std::vector<int>> clusters = point_processorI->euclideanCluster(segmented_cloud.first, tree, 0.45, 8, 550);
-	//
+	
 	auto endTime = std::chrono::steady_clock::now();
 	auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
 	std::cout << "clustering found " << clusters.size() << " and took " << elapsedTime.count() << " milliseconds" << std::endl;
 
     // Separate clusters
-
     std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters;
     
     int clusterId = 0;
@@ -80,12 +76,12 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr &viewer, ProcessPointCloud
         {
                 clusterCloud->points.push_back(segmented_cloud.first->points[indice]);
         }
-			
-        
+
         cloudClusters.push_back(clusterCloud);
 		++clusterId;
 	}
 
+    // Render output
 	std::vector<Color> colors = {Color(1, 0, 0), Color(0, 1, 0), Color(0, 0, 1), Color(1, 1, 0), Color(0, 1, 1), Color(1, 1, 1),
                                  Color(0.5, 0, 0), Color(0, 0.5, 0), Color(0, 0, 0.5), Color(0.5, 0.5, 0), Color(0, 0.5, 0.5)};
 

@@ -30,7 +30,9 @@ struct KdTree
 	{
 	}
 
-	void insertHelper(Node **node, pcl::PointXYZI point, int id, int depth)
+	// Insert points in tree
+	template <typename PointT>
+	void insertHelper(Node **node, PointT point, int id, int depth)
 	{
 		if (*node == NULL)
 		{
@@ -51,31 +53,33 @@ struct KdTree
 		}
 	}
 
-	void insert(pcl::PointXYZI point, int id)
+	template <typename PointT>
+	void insert(PointT point, int id)
 	{
-		// TODO: Fill in this function to insert a new point into the tree
-		// the function should create a new node and place correctly with in the root
 		insertHelper(&root, point, id, 0);
 	}
 
-	void searchHelper(Node *node, pcl::PointXYZI target, float distanceTol, int depth, std::vector<int> &ids)
+	template <typename PointT>
+	void searchHelper(Node *node, PointT target, float distanceTol, int depth, std::vector<int> &ids)
 	{
 		if (node != NULL)
-		{
-			// if (fabs(node->point[0] - target[0]) <= distanceTol && fabs(node->point[1] - target[1]) <= distanceTol)
-
-			// if ((node->point[0] <= (target[0]+distanceTol) && node->point[0] >= (target[0]-distanceTol)) && (node->point[1] <= (target[1]+distanceTol) && node->point[1] >= (target[1]-distanceTol)))
+		{	
+			// Box check - initial distance check
 			if (fabs(node->point.getArray3fMap()[0] - target.getArray3fMap()[0]) < distanceTol &&
 				fabs(node->point.getArray3fMap()[1] - target.getArray3fMap()[1]) < distanceTol &&
 				fabs(node->point.getArray3fMap()[2] - target.getArray3fMap()[2]) < distanceTol)
 			{
+				// Compute distance when inside box
 				float distance = sqrt((node->point.getArray3fMap()[0] - target.getArray3fMap()[0]) * (node->point.getArray3fMap()[0] - target.getArray3fMap()[0]) +
 									  (node->point.getArray3fMap()[1] - target.getArray3fMap()[1]) * (node->point.getArray3fMap()[1] - target.getArray3fMap()[1]) +
 									  (node->point.getArray3fMap()[2] - target.getArray3fMap()[2]) * (node->point.getArray3fMap()[2] - target.getArray3fMap()[2]));
+				
+				// Record index with qualified distances
 				if (distance < distanceTol)
 					ids.push_back(node->id);
 			}
 
+			// Route the progression inside the tree with the help of depth
 			int check_index = depth % 3;
 			if ((target.getArray3fMap()[check_index] - distanceTol) < node->point.getArray3fMap()[check_index])
 			{
@@ -89,7 +93,8 @@ struct KdTree
 	}
 
 	// return a list of point ids in the tree that are within distance of target
-	std::vector<int> search(pcl::PointXYZI target, float distanceTol)
+	template <typename PointT>
+	std::vector<int> search(PointT target, float distanceTol)
 	{
 		std::vector<int> ids;
 		searchHelper(root, target, distanceTol, 0, ids);
